@@ -1,0 +1,16 @@
+# Render Blueprint for the Incidentaling backend (the "brain").
+# Render reads this file automatically when you create a "Blueprint" from the repo.
+# Free plan note: the service sleeps after ~15 min idle and cold-starts (~50s) on the
+# next request. In-memory state resets when it sleeps/restarts — fine for a demo.
+
+services:
+  - type: web
+    name: incidentaling-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
