@@ -15,6 +15,11 @@ as a system-design study vehicle (see [`ARCHITECTURE.md`](./ARCHITECTURE.md)).
  netflow ───►  /ingest/pull  ─►  netflow table  ─────────► C2 beacon rule  ─►  contain + measure
 ```
 
+## Guides
+- **[RUNNING.md](./RUNNING.md)** — run it on your own computer, step by step (no Docker).
+- **[DEPLOY.md](./DEPLOY.md)** — put it online for free (Vercel + Render).
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** — how the whole system is designed.
+
 ## Stack
 - **Backend (the core):** Python 3.11+ / FastAPI. Async ingestion, in-process mock of a
   ClickHouse columnar store, and a Temporal-style durable workflow engine.
