@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import ntpath
 import uuid
+from collections import Counter
 
 from app.models import Alert, AlertSeverity
 from app.models.events import TelemetryKind
@@ -114,11 +115,15 @@ class Detector:
                 continue
             host = group[0]["host"]
             first_ts = min(g["ts"] for g in group)
+            # The account hit most often is the most likely target to lock down.
+            targeted = Counter(g["user"] for g in group if g["user"]).most_common(1)
+            user = targeted[0][0] if targeted else ""
             alert = Alert(
                 alert_id=_alert_id(f"bruteforce:{ip}:{host}:{first_ts}"),
                 rule="auth.brute_force",
                 severity=AlertSeverity.HIGH,
                 host=host,
+                user=user,
                 source_ip=ip,
                 ts=first_ts,
                 detail=f"{len(group)} logons from {ip} (threshold {BRUTE_FORCE_THRESHOLD})",
