@@ -1,0 +1,16 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.sqlite
+*.db
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.env*.local
+
+# OS
+.DS_Store
