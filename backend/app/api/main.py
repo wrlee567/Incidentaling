@@ -6,7 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
-from app.api import ingestion_routes, query_routes
+from app.api import ingestion_routes, query_routes, sim_routes
+from app.correlation import Detector
 from app.state import AppState
 
 
@@ -21,9 +22,12 @@ def create_app(ttl_days: int | None = None) -> FastAPI:
         allow_headers=["*"],
     )
 
-    app.state.app_state = AppState(ttl_days=ttl_days)
+    state = AppState(ttl_days=ttl_days)
+    app.state.app_state = state
+    app.state.detector = Detector(state)
     app.include_router(ingestion_routes.router)
     app.include_router(query_routes.router)
+    app.include_router(sim_routes.router)
 
     @app.get("/health", tags=["meta"])
     def health() -> dict:
