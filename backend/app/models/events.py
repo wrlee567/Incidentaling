@@ -149,3 +149,10 @@ class Alert(BaseModel):
     source_ip: str = ""
     ts: int = Field(default_factory=now_ms)
     detail: str = ""
+
+    # AI enrichment fields — populated asynchronously after detection.
+    # All optional so the model stays valid before enrichment completes.
+    ai_explanation: str | None = None
+    ai_severity_justification: str | None = None
+    ai_recommended_actions: list[str] | None = None
+    ai_threat_intel: str | None = None

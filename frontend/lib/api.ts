@@ -12,6 +12,15 @@ export const SEVERITY_LABEL: Record<Severity, string> = {
   4: "CRITICAL",
 };
 
+export interface AlertEnrichment {
+  alert_id: string;
+  explanation: string;
+  severity_justification: string;
+  recommended_actions: string[];
+  threat_intel: string;
+  confidence: number;
+}
+
 export interface Alert {
   alert_id: string;
   rule: string;
@@ -21,6 +30,11 @@ export interface Alert {
   source_ip: string;
   ts: number;
   detail: string;
+  // AI enrichment fields — populated asynchronously after detection
+  ai_explanation?: string | null;
+  ai_severity_justification?: string | null;
+  ai_recommended_actions?: string[] | null;
+  ai_threat_intel?: string | null;
 }
 
 export interface TableStats {
@@ -74,4 +88,9 @@ export const api = {
   detect: () => req<{ new_alerts: Alert[] }>("/detect", { method: "POST" }),
   respond: () =>
     req<{ launched: unknown[] }>("/soar/respond", { method: "POST" }),
+  enrichAlert: (alertId: string) =>
+    req<AlertEnrichment>("/ai/enrich", {
+      method: "POST",
+      body: JSON.stringify({ alert_id: alertId }),
+    }),
 };
