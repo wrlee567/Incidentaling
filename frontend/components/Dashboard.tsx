@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import {
   Alert,
+  AlertEnrichment,
   EnvironmentState,
   SEVERITY_LABEL,
   Severity,
@@ -52,13 +53,101 @@ function Bars({ stats }: { stats: Stats }) {
   );
 }
 
+function EnrichmentPanel({
+  alert,
+  localEnrichment,
+  loading,
+  onAnalyze,
+}: {
+  alert: Alert;
+  localEnrichment: AlertEnrichment | null;
+  loading: boolean;
+  onAnalyze: () => void;
+}) {
+  // Prefer server-side enrichment (from auto-enrich), fall back to locally fetched
+  const explanation = alert.ai_explanation ?? localEnrichment?.explanation ?? null;
+  const justification = alert.ai_severity_justification ?? localEnrichment?.severity_justification ?? null;
+  const actions = alert.ai_recommended_actions ?? localEnrichment?.recommended_actions ?? null;
+  const intel = alert.ai_threat_intel ?? localEnrichment?.threat_intel ?? null;
+
+  if (!explanation && !loading) {
+    return (
+      <div className="flex items-center gap-3 px-3 py-2 text-xs text-slate-400">
+        <span>No AI analysis yet.</span>
+        <button
+          onClick={onAnalyze}
+          className="rounded bg-violet-700 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-violet-600"
+        >
+          Analyze with Claude
+        </button>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="px-3 py-2 text-xs text-slate-400 animate-pulse">
+        Claude is analyzing this alert…
+      </div>
+    );
+  }
+
+  const isMock = explanation?.startsWith("[MOCK]") ?? false;
+
+  return (
+    <div className="space-y-3 px-3 py-3 text-xs">
+      {isMock && (
+        <div className="rounded border border-amber-800 bg-amber-950/40 px-2 py-1 text-amber-300">
+          Mock mode — set <code className="font-mono">ANTHROPIC_API_KEY</code> for real AI analysis
+        </div>
+      )}
+      <div>
+        <div className="mb-1 font-semibold text-slate-300">What happened</div>
+        <p className="text-slate-400 leading-relaxed">{explanation}</p>
+      </div>
+      <div>
+        <div className="mb-1 font-semibold text-slate-300">Why this severity</div>
+        <p className="text-slate-400 leading-relaxed">{justification}</p>
+      </div>
+      {actions && actions.length > 0 && (
+        <div>
+          <div className="mb-1 font-semibold text-slate-300">Recommended actions</div>
+          <ol className="list-decimal list-inside space-y-0.5 text-slate-400">
+            {actions.map((a, i) => <li key={i}>{a}</li>)}
+          </ol>
+        </div>
+      )}
+      {intel && (
+        <div>
+          <div className="mb-1 font-semibold text-slate-300">Threat intelligence</div>
+          <p className="text-slate-400 leading-relaxed">{intel}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AlertsTable({ alerts }: { alerts: Alert[] }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [localEnrichments, setLocalEnrichments] = useState<Record<string, AlertEnrichment>>({});
+
+  const handleAnalyze = async (alertId: string) => {
+    setLoadingId(alertId);
+    try {
+      const result = await api.enrichAlert(alertId);
+      setLocalEnrichments((prev) => ({ ...prev, [alertId]: result }));
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900">
       <div className="border-b border-slate-800 p-4 text-sm font-medium text-slate-300">
         Alerts ({alerts.length})
       </div>
-      <div className="max-h-80 overflow-auto">
+      <div className="max-h-96 overflow-auto">
         <table className="w-full text-left text-xs">
           <thead className="sticky top-0 bg-slate-900 text-slate-400">
             <tr>
@@ -66,28 +155,58 @@ function AlertsTable({ alerts }: { alerts: Alert[] }) {
               <th className="p-2">Rule</th>
               <th className="p-2">Host</th>
               <th className="p-2">Detail</th>
+              <th className="p-2 w-6"></th>
             </tr>
           </thead>
           <tbody>
             {alerts.length === 0 && (
               <tr>
-                <td className="p-3 text-slate-500" colSpan={4}>
+                <td className="p-3 text-slate-500" colSpan={5}>
                   No alerts yet — inject a scenario and run detection.
                 </td>
               </tr>
             )}
-            {alerts.map((a) => (
-              <tr key={a.alert_id} className="border-t border-slate-800">
-                <td className="p-2">
-                  <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${SEV_COLOR[a.severity]}`}>
-                    {SEVERITY_LABEL[a.severity]}
-                  </span>
-                </td>
-                <td className="p-2 font-mono">{a.rule}</td>
-                <td className="p-2">{a.host}</td>
-                <td className="p-2 text-slate-400">{a.detail}</td>
-              </tr>
-            ))}
+            {alerts.map((a) => {
+              const isExpanded = expandedId === a.alert_id;
+              const hasEnrichment = !!(a.ai_explanation ?? localEnrichments[a.alert_id]);
+              return (
+                <Fragment key={a.alert_id}>
+                  <tr
+                    className="border-t border-slate-800 cursor-pointer hover:bg-slate-800/50 transition-colors"
+                    onClick={() => setExpandedId(isExpanded ? null : a.alert_id)}
+                  >
+                    <td className="p-2">
+                      <span className={`rounded px-2 py-0.5 text-[10px] font-semibold ${SEV_COLOR[a.severity]}`}>
+                        {SEVERITY_LABEL[a.severity]}
+                      </span>
+                    </td>
+                    <td className="p-2 font-mono">{a.rule}</td>
+                    <td className="p-2">{a.host}</td>
+                    <td className="p-2 text-slate-400">{a.detail}</td>
+                    <td className="p-2 text-slate-500 text-center">
+                      <span className="inline-block transition-transform duration-150" style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>
+                        ›
+                      </span>
+                      {hasEnrichment && !isExpanded && (
+                        <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-violet-500" title="AI analysis available" />
+                      )}
+                    </td>
+                  </tr>
+                  {isExpanded && (
+                    <tr className="border-t border-slate-800 bg-slate-950/50">
+                      <td colSpan={5}>
+                        <EnrichmentPanel
+                          alert={a}
+                          localEnrichment={localEnrichments[a.alert_id] ?? null}
+                          loading={loadingId === a.alert_id}
+                          onAnalyze={() => handleAnalyze(a.alert_id)}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              );
+            })}
           </tbody>
         </table>
       </div>
