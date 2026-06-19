@@ -96,6 +96,7 @@ class Detector:
                 source_ip=source_ip,
                 ts=r["ts"],
                 detail=f"known ransomware {basename!r}; cmd={r['command_line']!r}",
+                mitre_techniques=["T1059.003", "T1490", "T1486"],
             )
             if self._emit(alert):
                 out.append(alert)
@@ -127,6 +128,7 @@ class Detector:
                 source_ip=ip,
                 ts=first_ts,
                 detail=f"{len(group)} logons from {ip} (threshold {BRUTE_FORCE_THRESHOLD})",
+                mitre_techniques=["T1110", "T1110.003"],
             )
             if self._emit(alert):
                 out.append(alert)
@@ -148,6 +150,7 @@ class Detector:
                 source_ip=r["dst_ip"],
                 ts=r["ts"],
                 detail=f"beacon to C2 {r['dst_ip']} ({r['bytes_sent']} bytes sent)",
+                mitre_techniques=["T1071", "T1071.001", "T1041"],
             )
             if self._emit(alert):
                 out.append(alert)
