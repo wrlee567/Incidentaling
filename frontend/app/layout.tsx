@@ -20,6 +20,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link className="rounded px-3 py-2 hover:bg-slate-800" href="/">
                 SOC Dashboard
               </Link>
+              <Link className="rounded px-3 py-2 hover:bg-slate-800" href="/investigate">
+                Tier-3 Investigation
+              </Link>
               <Link className="rounded px-3 py-2 hover:bg-slate-800" href="/playbooks">
                 Playbook Editor
               </Link>

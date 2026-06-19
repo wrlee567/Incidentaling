@@ -156,3 +156,9 @@ class Alert(BaseModel):
     ai_severity_justification: str | None = None
     ai_recommended_actions: list[str] | None = None
     ai_threat_intel: str | None = None
+
+    # MITRE ATT&CK technique IDs tagged at detection time.
+    mitre_techniques: list[str] = Field(
+        default_factory=list,
+        description="MITRE ATT&CK technique IDs (e.g. T1486, T1110).",
+    )

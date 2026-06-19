@@ -6,7 +6,12 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.ai import features
 from app.api.deps import get_state
-from app.models.ai_models import AlertEnrichment, EnrichRequest
+from app.models.ai_models import (
+    AlertEnrichment,
+    EnrichRequest,
+    InvestigateRequest,
+    InvestigationReport,
+)
 from app.state import AppState
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -37,10 +42,22 @@ async def enrich(body: EnrichRequest, state: AppState = Depends(get_state)) -> A
 
 # -- Future phases (not yet implemented) -------------------------------------
 
-@router.post("/investigate", status_code=501)
-async def investigate() -> dict:
-    """[Phase 2] Agentic investigation — Claude autonomously queries the SIEM."""
-    return {"detail": "Not implemented yet"}
+@router.post("/investigate", response_model=InvestigationReport)
+async def investigate(
+    body: InvestigateRequest, state: AppState = Depends(get_state),
+) -> InvestigationReport:
+    """[Phase 2] Tier-3 incident investigation — multi-dataset correlation,
+    MITRE mapping, confidence-scored containment, NIST/CRI compliance docs."""
+    alert = next((a for a in state.alerts if a.alert_id == body.alert_id), None)
+    if alert is None:
+        raise HTTPException(status_code=404, detail=f"alert {body.alert_id!r} not found")
+    try:
+        return await features.investigate_incident(alert, state)
+    except (ValueError, TypeError, KeyError) as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"failed to parse Claude investigation response: {exc!r}",
+        )
 
 
 @router.post("/anomalies", status_code=501)
