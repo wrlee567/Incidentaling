@@ -35,6 +35,71 @@ export interface Alert {
   ai_severity_justification?: string | null;
   ai_recommended_actions?: string[] | null;
   ai_threat_intel?: string | null;
+  mitre_techniques?: string[];
+}
+
+// -- Tier-3 investigation types ---------------------------------------------
+
+export interface TriageAssessment {
+  threat_objectives: string;
+  severity: string;
+  status: string;
+  compromised_assets: string[];
+}
+
+export interface PivotTimelineEntry {
+  timestamp: string;
+  source_environment: string;
+  asset_or_identity: string;
+  activity_or_artifact: string;
+  correlation_pivot_point: string;
+}
+
+export interface AutomatedAction {
+  action: string;
+  activity_name: string;
+  params: Record<string, unknown>;
+  confidence_score: number;
+  rationale: string;
+}
+
+export interface AnalystValidatedAction {
+  action: string;
+  priority: string;
+  confidence_score: number;
+  rationale: string;
+}
+
+export interface RemediationPlaybook {
+  automated_actions: AutomatedAction[];
+  analyst_validated_actions: AnalystValidatedAction[];
+}
+
+export interface NistIrPhase {
+  phase: string;
+  activities: string[];
+  status: string;
+}
+
+export interface CriDiagnosticStatement {
+  control_id: string;
+  description: string;
+  finding: string;
+  evidence: string;
+}
+
+export interface ComplianceDocumentation {
+  nist_ir_phases: NistIrPhase[];
+  cri_profile_statements: CriDiagnosticStatement[];
+  policy_update_recommendation: string;
+}
+
+export interface InvestigationReport {
+  alert_id: string;
+  triage_assessment: TriageAssessment;
+  pivot_correlation_timeline: PivotTimelineEntry[];
+  remediation_playbook: RemediationPlaybook;
+  compliance_and_audit_documentation: ComplianceDocumentation;
 }
 
 export interface TableStats {
@@ -90,6 +155,11 @@ export const api = {
     req<{ launched: unknown[] }>("/soar/respond", { method: "POST" }),
   enrichAlert: (alertId: string) =>
     req<AlertEnrichment>("/ai/enrich", {
+      method: "POST",
+      body: JSON.stringify({ alert_id: alertId }),
+    }),
+  investigateAlert: (alertId: string) =>
+    req<InvestigationReport>("/ai/investigate", {
       method: "POST",
       body: JSON.stringify({ alert_id: alertId }),
     }),

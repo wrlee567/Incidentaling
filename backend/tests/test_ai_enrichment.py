@@ -140,11 +140,6 @@ def test_alert_model_has_ai_fields():
 # Future phase stubs return 501
 # ---------------------------------------------------------------------------
 
-def test_investigate_stub_returns_501(client: TestClient):
-    resp = client.post("/ai/investigate")
-    assert resp.status_code == 501
-
-
 def test_anomalies_stub_returns_501(client: TestClient):
     resp = client.post("/ai/anomalies")
     assert resp.status_code == 501
